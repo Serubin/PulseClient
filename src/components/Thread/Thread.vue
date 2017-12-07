@@ -37,8 +37,9 @@ export default {
         this.$store.state.msgbus.$on('archive-btn', this.archive);
         this.$store.state.msgbus.$on('unarchive-btn', this.archive);
 
-        this.$store.commit('colors', this.contact_data.colors);
-
+        this.html = document.querySelector("html");
+        this.list = document.querySelector("#content");
+        this.snackbar = document.querySelector(".mdl-snackbar");
 
         window.addEventListener('focus', (e) => { 
             this.markAsRead();
@@ -63,6 +64,9 @@ export default {
             read: this.isRead || true, 
             messages: [],
             previous_title: "",
+            html: document.querySelector("html"),
+            list: document.querySelector("#content"),
+            snackbar: document.querySelector(".mdl-snackbar"),
         }
     },
 
@@ -111,12 +115,15 @@ export default {
 
                     }
 
+                    this.$store.commit('colors', this.contact_data.colors);
+
                     // Wait for messages to render
                     Vue.nextTick(() => { 
                         Util.scrollToBottom();
 
                         this.$store.commit("loading", false);
                         this.markAsRead();
+
 
                         this.previous_title = this.$store.state.title;
                         this.$store.commit('title', this.contact_data.title);
@@ -138,18 +145,59 @@ export default {
                 return;
 
             // Determine if displayed
-            let displayed = this.messages.containsObjKey('device_id', event_obj.device_id);
+            const displayed = this.messages.containsObjKey('device_id', event_obj.device_id);
             if(displayed) // Ignore if displayed
                 return;
             
-            this.messages.push(event_obj);
+             // Add time stamp
+            const lastMessage = this.messages[this.messages.length - 1];
+            const lastTimestamp = new Date(lastMessage.timestamp);
+
+            lastMessage.dateLabel = this.compareTimestamps(
+                new Date(event_obj.timestamp), lastTimestamp, 15
+            );
             
+            this.messages.push(event_obj);
+
+            // Mark as unread
+            if (event_obj.type == 0 || event_obj.type == 6) 
+                this.read = false;
+
+            // Deploy snackbar if scrolled up 
+            if ((this.html.scrollHeight - this.html.offsetHeight - 200) > this.html.scrollTop
+                && !(this.list.scrollHeight < this.html.offsetHeight)) {
+                
+                if (!this.snackbar.MaterialSnackbar.active) {
+                    var data = {
+                        message: 'New Message',
+                        actionHandler: (e) => {
+                            this.snackbar.MaterialSnackbar.cleanup_(); // Hide snackbar
+
+                            Vue.nextTick(() => {            // Animate on next tick to
+                                Util.scrollToBottom(250);   // avoid scrolling before render
+                            });
+                        },
+                        actionText: 'Show',
+                        timeout: 60*60*60 // Hour timeout
+                    };
+                    Util.snackbar(data);
+
+                    setTimeout(() => { // If snackbar timeout, scroll to bottom
+                        Vue.nextTick(() => {            // Animate on next tick to
+                            Util.scrollToBottom(250);   // avoid scrolling before render
+                        });
+                    }, 60*60*60);
+                }
+                
+                return;
+            }
+
+
             Vue.nextTick(() => {            // Animate on next tick to
                 Util.scrollToBottom(250);   // avoid scrolling before render
             });
+            
 
-            if (event_obj.type == 0 || event_obj.type == 6)
-                this.read = false;
         },
 
 

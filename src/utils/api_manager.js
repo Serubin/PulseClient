@@ -20,7 +20,7 @@ export default class Api {
      */
     openWebSocket() {
 
-        let this_ = this;
+        const this_ = this;
 
 
         this.socket = new ReconnectingWebsocket(Url.get('websocket') + Url.getAccountParam());
@@ -34,7 +34,7 @@ export default class Api {
 
             this.has_disconnected = false;
 
-            let subscribe = JSON.stringify({
+            const subscribe = JSON.stringify({
                 "command": "subscribe",
                 "identifier": JSON.stringify({
                     "channel": "NotificationsChannel"
@@ -74,17 +74,20 @@ export default class Api {
         if (e.data.indexOf("ping") != -1)  // Is keep alive event
             return;
 
-        let json = JSON.parse(e.data);
+        const json = JSON.parse(e.data);
 
         if (typeof json.message == "undefined") 
             return;
+
+        const operation = json.message.operation;
 
         if (typeof json.message.content.data != "undefined")
             json.message.content.data = emojione.unicodeToImage(
                 json.message.content.data
             );
         
-        if (json.message.operation == "added_message") {
+
+        if (operation == "added_message") {
             let message = json.message.content;
             message.message_from = message.from;
 
@@ -93,8 +96,13 @@ export default class Api {
             this.notify(message);
 
             store.state.msgbus.$emit('newMessage', message);
-        } else if (json.message.operation == "read_conversation") {
-            store.state.msgbus.$emit('conversationRead', json.message.content.id);
+        } else if (operation == "read_conversation") {
+            const id = json.message.content.id;
+            store.state.msgbus.$emit('conversationRead', id);
+        } else if (operation == "update_message_type") {
+            const id = json.message.content.id;
+            const message_type = json.message.content.message_type;
+            store.state.msgbus.$emit('updateMessageType', {id, message_type});
         }
 
     }
@@ -122,7 +130,7 @@ export default class Api {
 
         const link = "/thread/" + message.conversation_id;
 
-        var notification = new Notification(title, {
+        const notification = new Notification(title, {
             icon: '/static/images/android-desktop.png',
             body: snippet
         });
@@ -162,7 +170,7 @@ export default class Api {
                 .then(response => {
                     response = response.data
                     // Decrypt Conversations items
-                    for(var i = 0; i < response.length; i++)
+                    for(let i = 0; i < response.length; i++)
                         response[i] = Crypto.decryptConversation(response[i]);
 
                     resolve(response); // Resolve response
@@ -186,7 +194,7 @@ export default class Api {
                 .then(response => { 
                     response = response.data
                     // Decrypt Conversations items
-                    for(var i = 0; i < response.length; i++)
+                    for(let i = 0; i < response.length; i++)
                         response[i] = Crypto.decryptMessage(response[i]);
 
                     resolve(response); // Resolve response
@@ -301,14 +309,19 @@ export default class Api {
     static processSettings (response) {
         response = response.data
 
+        const colors = {
+            'default': Util.expandColor(response.color),
+            'dark': Util.expandColor(response.color),
+            'accent': Util.expandColor(response.color),
+        };
+
         store.commit('theme_base', response.base_theme);
         store.commit('theme_round', response.rounder_bubbles);
-        store.commit('theme_global_colors', {
-            default: Util.expandColor(response.color),
-            dark: Util.expandColor(response.color_dark),
-            accent: Util.expandColor(response.color_accent),
-        });
         store.commit('theme_use_global', response.use_global_theme);
+        store.commit('theme_global', colors);
+        store.commit('colors', colors);
+
+
     }
 
     static fetchImage (image_id) {

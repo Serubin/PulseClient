@@ -64,10 +64,14 @@ export default {
             .then( response => {
                 this.$store.commit("loading", false);
             })
+
+
+        this.$store.commit('title', this.title);
     },
 
     data () {
         return {
+            title: "Settings",
             colored_toolbar: this.$store.state.theme_toolbar,
             show_notifications: this.$store.state.notifications,
         }
@@ -82,11 +86,13 @@ export default {
         },
 
         global_colors () {
-            let colors = this.$store.state.theme_global_colors;
+            const defaul = this.$store.state.theme_global_default;
+            const dark = this.$store.state.theme_global_dark;
+            const accent = this.$store.state.theme_global_accent;
 
-            return this.rgbaToHex(colors.default) 
-                + ", " + this.rgbaToHex(colors.dark) 
-                + ", " + this.rgbaToHex(colors.accent);
+            return this.rgbaToHex(defaul) 
+                + ", " + this.rgbaToHex(dark) 
+                + ", " + this.rgbaToHex(accent);
         },
 
         use_global_theme () {
@@ -138,6 +144,8 @@ export default {
         },
         'colored_toolbar' () {
             this.$store.commit('theme_toolbar', this.colored_toolbar)
+            const toolbar = document.querySelector("#toolbar");
+            toolbar.style.background = "";
         }
     }
 }
