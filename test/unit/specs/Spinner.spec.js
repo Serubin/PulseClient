@@ -1,11 +1,11 @@
 // Import Vue and the component being tested
 import Vue from 'vue'
-import Splash from '@/components/Splash.vue'
+import Spinner from '@/components/Spinner.vue'
 
-describe('Splash', () => {
+describe('Spinner', () => {
     // Inspect the raw component options
     it('has the correct name', () => {
-        expect(Splash.name).toBe('splash')
+        expect(Spinner.name).toBe('spinner')
     })
 })
 
