@@ -8,7 +8,10 @@ window.localStorage = global.localStorage
 
 // Init vuex store
 import store from '@/store'
-global.store = store; // Globalize store
+global.$store = store; // Globalize store
+
+import router from '@/router'
+global.$router = router;
 
 // Setup ajax
 Vue.use(ajax)
