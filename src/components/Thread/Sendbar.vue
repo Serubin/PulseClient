@@ -1,7 +1,16 @@
 <template>
-    <div class="send-bar">
+    <div class="send-bar" v-mdl>
+        <div class="mdl-progress mdl-js-progress mdl-progress__indeterminate" :style="{ display: loading ? '' : 'none' }" v-mdl></div>
+        <div v-if="$store.state.loaded_media" class="preview" v-mdl>
+            <div class="overlay">
+                <button class="media-clear mdl-button mdl-js-button mdl-button--colored mdl-button--fab mdl-js-ripple-effect" :style="{ background: send_color }" @click="removeMedia">
+                    <i class="material-icons">clear</i>
+                </button>
+            </div>
+            <img :src="media_blob" />
+        </div>
         <div class="send-bar-inner" id="sendbar">
-            <!-- Remove until implemented <input id="attach" class="mdl-button mdl-js-button mdl-button--icon attach-button" type="image" src="../../assets/images/ic_attach.png"/> -->
+            <input id="attach" class="mdl-button mdl-js-button mdl-button--icon attach-button" type="image" src="../../assets/images/ic_attach.png" @click.prevent="attachMedia"/>
             <input id="emoji" class="mdl-button mdl-js-button mdl-button--icon emoji-button" type="image" src="../../assets/images/ic_mood.png" @click="toggleEmoji"/>
             <div id="emoji-wrapper" v-show="show_emoji" @click.self="toggleEmoji">
                     <Picker set="emojione" :style="emojiStyle"  :set="set" :per-line="perLine" :skins="skin" :onItemClick="insertEmoji" />
@@ -19,6 +28,7 @@
 </template>
 
 <script>
+import Vue from 'vue'
 import AutoGrow from '@/lib/textarea-autogrow.js'
 import emojione from 'emojione'
 import 'vue-emoji-mart/css/emoji-mart.css'
@@ -27,14 +37,14 @@ import { Api } from '@/utils'
 
 export default {
     name: 'Sendbar',
-    props: ['threadId'],
+    props: ['threadId', 'onSend', 'loading'],
 
     mounted () {
         let autogrow = new AutoGrow({target: document.getElementById("message-entry"), extra_line: true, content_el: document.getElementById("message-list")});
 
         window.addEventListener('resize', this.updateEmojiMargin)
         this.$wrapper = document.querySelector("#wrapper");
-        
+        this.$sendbar = document.querySelector("#message-entry");
     },
 
     data () {
@@ -51,32 +61,113 @@ export default {
             skin: 3,
             show_emoji: false,
             $wrapper: null,
+            $sendbar: null,
         }
     },
 
     methods: {
-        dispatchSend(e) { // Dispatch send message when klicked
-            if (e.shiftKey) {
-                this.message += "\n";
-                return;
-            }
-            
-            if (this.message.length <= 0) 
-                return;
+        /**
+         * dispatchSend
+         * Handles send and enter press
+         * Also handles shift modifier
+         * @param e - event object
+         */
+        dispatchSend(e) { // Dispatch send message when clicked
 
-            Api.sendMessage(this.message, "text/plain", this.threadId)
+            if (e.shiftKey) {
+                // Get start/end of selection for insert location
+                const start = e.target.selectionStart;
+                const end =  e.target.selectionEnd;
+
+                // Overwrite selection with newline
+                this.message = this.message.substr(0,start) 
+                    + "\n" + this.message.substr(end, this.message.length)
+
+                // Set new location of selection to start of old selection
+                // Wait until next tick to ensure the new message gets rendered
+                Vue.nextTick(() =>  
+                    e.target.setSelectionRange(start + 1, start + 1)
+                );
+
+                return; // Full stop
+            }
+
+            // If message is empty, we're done
+            if (this.message.length <= 0 && !this.$store.state.loaded_media ) 
+                return false;
+
+            // Send message to handler
+            this.onSend(this.message);
             
+            // Clear message
             this.message = "";
         },
-        toggleEmoji (toggle=null) {
+        /**
+         * Removes media from store
+         */
+        removeMedia () {
+            if (this.$store.state.loaded_media)
+                this.$store.commit('loaded_media', null);
+        },
 
-            this.updateEmojiMargin(true);
-            if(typeof toggle != "boolean")
-                return this.show_emoji = !this.show_emoji
+        /**
+         * Attach media
+         * Get media from event and puts it in the store
+         * @param e - event object
+         */
+        attachMedia (e) {
+
+            // Create input to attach file
+            const input = document.createElement('input');
+            input.setAttribute("type", "file");
+
+            // Add event listener
+            input.addEventListener('change', (e) => {
+                let file;
+
+                // Get file from event
+                if (e.dataTransfer)
+                    file = e.dataTransfer.files[0]
+                else
+                    file = e.target.files[0];
+                
+                // Load file into cache
+                Api.loadFile(file);
+            });
+
+            // Simulate Click to open file input menu
+            const event = document.createEvent("MouseEvents");
+            event.initMouseEvent("click", true, true, window, 1, 0, 0, 0, 0,
+                false, false, false, false, 0, null);
+
+            // Dispatch click event
+            input.dispatchEvent(event)
+        },
+
+        /**
+         * Toggle emoji menu
+         * @param toggle - toggle override (default: null)
+         */
+        toggleEmoji (toggle=null) {
             
+            // Update emoji wrapper margin
+            this.updateEmojiMargin(true);
+
+            // If no toggle given, toggle the show_emoji value
+            if(typeof toggle != "boolean") 
+                return this.show_emoji = !this.show_emoji
+                
+            // Otherwise set to provided toggle
             return this.show_emoji = toggle
 
         },
+
+        /**
+         * Updates margin of the emoji box
+         * Updates margin to match edge of the message box
+         * Note: only updates when emoji box is open
+         * @param force - force update
+         */
         updateEmojiMargin (force=false) {
 
             if (!this.show_emoji && !force)
@@ -87,15 +178,32 @@ export default {
             const width = document.documentElement.clientWidth;
             let margin = 0;
 
-            // Handles left side offset
+            // Handles left side offset - same alg as wrapper margin
             if (width > MAIN_CONTENT_SIZE) {
                 margin = (width - MAIN_CONTENT_SIZE) / 2;
             }
-
+            
+            // Set margin + sidebar
             this.emojiStyle.left = (270  + margin) + "px";
         },
+        /**
+         * Inserts Emoji to curser location
+         * @param e emoji event
+         */
         insertEmoji(e) {
-            this.message += e.native;
+            // Get start/end of selection for insert location
+            const start = this.$sendbar.selectionStart;
+            const end =  this.$sendbar.selectionEnd;
+
+            // Overwrite selection with emoji
+            this.message = this.message.substr(0,start) 
+                + e.native + this.message.substr(end, this.message.length)
+
+            // Set new location of selection to start of old selection
+            // Wait until next tick to ensure the new message gets rendered
+            Vue.nextTick(() =>  
+                this.$sendbar.setSelectionRange(start + 1, start + 1)
+            );
         }
     },
 
@@ -103,16 +211,20 @@ export default {
         send_color () {
             return this.$store.state.colors_accent
         },
-        is_dirty () {
+        is_dirty () { // Is dirty fix for mdl
             if (this.message.length > 0)
                 return "is-dirty";
             return "";
+        },
+        media_blob () { // creates url object from media blob
+            return window.URL.createObjectURL(this.$store.state.loaded_media)
         }
     },
 
     watch: { 
         '$route' (to) { // Update thread on route change
             this.message = "";
+            this.removeMedia();
         }
     },
     components: {
@@ -133,6 +245,53 @@ export default {
         bottom: 0%;
         clear: both;
         transition: ease-in-out width $anim-time;
+
+        .mdl-progress {
+            width: 100%;
+        }
+
+        .preview {
+            position: relative;
+            background: #fafafa;
+            max-height: 300px;
+            overflow: hidden;
+
+            .overlay {
+                background: linear-gradient(to bottom, rgba(250,250,250,0) 95%,rgba(250,250,250,1) 100%);
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                height: 100%;
+                width: 100%;
+                z-index: 10;
+                
+                .media-clear {
+                    position: absolute;
+                    margin: 0.3em 1em;
+                    background: rgb(33, 150, 243) none repeat scroll 0% 0%;
+                    padding: 0.3em;
+                    right: 1em;
+                    width: 24px;
+                    min-width: 24px;
+                    min-height: 24px;
+                    height: 24px;
+                }
+
+                .media-clear i {
+                    width: 24px;
+                    font-size: 18px;
+                    line-height: 24px;
+                    height: 24px;
+                }
+            }
+
+            img {
+                margin: 1em calc(24px + 16px + 8px) 1em;
+                width: calc(100% - 108px);
+            }
+
+
+        }
 
         @media (min-width: 750px) {
             & {
@@ -240,6 +399,14 @@ export default {
     }
 
     body.dark {
+        .preview {
+            background: rgb(55,66,72);
+
+            .overlay {
+                background: linear-gradient(to bottom, rgba(55,66,72,0) 95%,rgba(55,66,72,1) 100%);
+            }
+        }
+
         .send-bar-inner {
             background: #374248;
             color: #fff;

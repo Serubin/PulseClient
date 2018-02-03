@@ -8,7 +8,9 @@
         <transition-group name="flip-list" tag="div">
                 <component v-for="conversation in conversations" :is="conversation.title ? 'ConversationItem' : 'DayLabel'" :conversation-data="conversation" :archive="archive" :small="small" :key="conversation.hash"/>
         </transition-group>
-
+        <button tag="button" class="compose mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored" @click="$router.push('/compose');" v-if="!small" v-mdl>
+            <i class="material-icons md-light">add</i>
+        </button>
     </div>
 </template>
 
@@ -120,10 +122,25 @@ export default {
 
             conv.hash = Hash(conv);
 
+
             // Move conversation if required
             if (conv_index != 1) {
                 conv = this.conversations.splice(conv_index, 1)[0]
-                this.conversations.splice(1, 0, conv)
+
+                // If top label is not "Today"
+                // This isn't elegant, but it works
+                if (this.conversations[0].label != "Today") {
+                    const title = "Today"; // Define title
+                    const label = {        // And Define Label
+                        label: title, 
+                        hash: Hash(title)
+                    } 
+                    // Push label and conversation
+                    this.conversations.splice(0, 0, label, conv)
+
+                } else { // Else, just push the converstation to index 1 (below label)
+                    this.conversations.splice(1, 0, conv)
+                }
             } 
         },
 
@@ -256,7 +273,13 @@ export default {
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style lang="scss" scoped>
     @import "../../assets/scss/_vars.scss";
-       
+    .compose {
+        position: fixed;
+        bottom: 0%;
+        right: 0%;
+        z-index: 3;
+        margin: 24px;
+    }
     #conversation-list {
         width: 100%;
         margin-top: 36px !important;
