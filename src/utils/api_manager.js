@@ -128,7 +128,7 @@ export default class Api {
 
         const title = contact.title;
         const snippet = contact.private_notifications 
-                            ? "" : Util.generateSnippet(message);
+            ? "" : Util.generateSnippet(message);
 
         const link = "/thread/" + message.conversation_id;
 
@@ -218,8 +218,8 @@ export default class Api {
         
         const promise = new Promise((resolve, reject) => {
             Vue.http.post(constructed_url, request, {'Content-Type': 'application/json'})
-            .then( response  => resolve(response) )
-            .catch( response => Api.rejectHandler(response, reject) )
+                .then( response  => resolve(response) )
+                .catch( response => Api.rejectHandler(response, reject) )
         });
 
         return promise;
@@ -296,7 +296,7 @@ export default class Api {
         if (compress == null)
             compress = 0.6
 
-         // Disallow large non-image files
+        // Disallow large non-image files
         if ((file.type.startsWith("image/") || !file.type === "image/gif") 
             && file.size > 1024 * 1024) {
             return new ImageCompressor(file, {
