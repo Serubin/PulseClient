@@ -46,9 +46,10 @@ export default {
     name: 'login',
 
     mounted () {
-        if (this.$store.state.account_id != '')
+        if (this.$store.state.account_id != '') // If has account id
             return this.$router.push({ name: 'conversations-list'});
 
+        // Open page & Remove splash
         this.$store.commit("loading", false);
         this.$store.commit('title', this.title);
     },
@@ -64,45 +65,61 @@ export default {
     },
 
     methods: {
+        /**
+         * Handles Login action
+         */
         doLogin() {
 
+            // Ignore if username or password aren't filled in
             if (this.username == '' || this.password == '')
                 return;
 
             this.error = false;
             this.loading = true;
 
+            // Attempt login
             Api.login(this.username, this.password)
                 .then((data) => this.handleData(data.data))
                 .catch((data) => this.handleError(data));
         },
 
+        /**
+         * Handles login success response
+         * Processes account_id and salt 
+         * @param data - login data
+         */
         handleData (data) {
             this.error = false;
 
             // Create hash
             let derived_key = sjcl.misc.pbkdf2(this.password, data.salt2, 10000, 256, hmacSHA1);
             let base64_hash = sjcl.codec.base64.fromBits(derived_key);
-            // Save data
+            // Save data to store
             this.$store.commit('account_id', data.account_id);
             this.$store.commit('hash', base64_hash);
             this.$store.commit('salt', data.salt1);
 
             Crypto.setupAes(); // Setup aes for session
 
+            // Done loading
             this.loading = false;
 
             // Start app       
             this.$store.state.msgbus.$emit('start-app');
 
+            // Push to conversations
             this.$router.push({ name: 'conversations-list'});
 
         },
 
+        /**
+         * Handles login error response
+         * @param data - response data (not used)
+         */
         handleError(data) {
             this.password = "";
-            this.error = true;
-            this.loading = false;
+            this.error = true; // Set error to true
+            this.loading = false; // Stop loading
         }
     },
 
