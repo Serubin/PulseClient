@@ -11,16 +11,18 @@ describe('Login', () => {
     }
 
     const vm = mount(Login, options);
-
-    // Inspect the raw component options
+    
+    // Check basic usage
     it('can mount', () => {
         vm.$mount();
     });
 
+    // Determine default info
     it('set\'s global title correctly', () => {
         expect($store.state.title).toBe("PulseClient");
     });
 
+    // Check doLogin
     it('correctly handles login request (will be error)', (done) => {
         
         vm.username = "test"; // Set false credentials
@@ -34,6 +36,7 @@ describe('Login', () => {
         }, 1000);
     });
 
+    // Check hash Processing
     it('correctly transforms & stores hash/key', () => {
         vm.password = '123456789';
         const data = {
