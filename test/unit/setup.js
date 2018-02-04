@@ -1,5 +1,6 @@
 import Vue from 'vue'
 import ajax from 'vue-h-ajax';
+import { mockRouter } from 'vuenit';
 
 // Setup mock localStorage
 global.window = {}
@@ -12,6 +13,11 @@ global.$store = store; // Globalize store
 
 import router from '@/router'
 global.$router = router;
+
+const { $route } = mockRouter();
+$route.name = "";
+
+global.$route = $route;
 
 // Setup ajax
 Vue.use(ajax)
