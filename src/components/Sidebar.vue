@@ -3,28 +3,10 @@
         <div id="sidebar" v-bind:style="marginLeft"> <!-- Sidebar-internal -->
             <div id="drawer-holder">
                 <ul id="drawer-links">
-                    <li id="conversations-link" @click="routeTo('conversations')">
+                    <li v-for="link in Object.keys(links)" :id="link + '-link'" @click="routeTo(link)">
                         <div class="link-card mdl-card mdl-js-button mdl-js-ripple-effect">
-                            <img src="../assets/images/holder.gif" width="24" height="24" class="icon conversations">
-                        Conversations
-                        </div>
-                    </li>
-                    <li id="archive-link" @click="routeTo('archive')">
-                        <div class="link-card mdl-card mdl-js-button mdl-js-ripple-effect">
-                            <img src="../assets/images/holder.gif" width="24" height="24" class="icon archive">
-                            Archive
-                        </div>
-                    </li>
-                    <li id="scheduled-messages-link" @click="routeTo">
-                        <div class="link-card mdl-card mdl-js-button mdl-js-ripple-effect">
-                            <img src="../assets/images/holder.gif" width="24" height="24" class="icon scheduled_messages">
-                            Scheduled Messages
-                        </div>
-                    </li>
-                    <li id="blacklist-link" @click="routeTo">
-                        <div class="link-card mdl-card mdl-js-button mdl-js-ripple-effect">
-                            <img src="../assets/images/holder.gif" width="24" height="24" class="icon blacklist">
-                            Blacklist
+                            <img src="../assets/images/holder.gif" width="24" height="24" :class="'icon ' + link">
+                            {{ links[link].name }}
                         </div>
                     </li>
                 </ul>
@@ -56,8 +38,22 @@ export default {
     data () {
         return {
             links: {
-                'conversations': { name: 'conversations-list'},
-                'archive': { name: 'conversations-list-archived'}
+                'conversations': { 
+                    name: 'Conversations',
+                    route: 'conversations-list'
+                },
+                'archive': { 
+                    name: 'Archive', 
+                    route: 'conversations-list-archived'
+                },
+                'scheduled_messages': {
+                    name: 'Scheduled Messages',
+                    route: ''
+                },
+                'blacklist': {
+                    name: 'Blacklist',
+                    route: ''
+                }
             }
         }
     },
@@ -71,7 +67,7 @@ export default {
          */
         routeTo (link) {
             this.close_drawer()
-            this.$router.push(this.links[link])
+            this.$router.push({name: this.links[link].route})
         },
 
         /**
