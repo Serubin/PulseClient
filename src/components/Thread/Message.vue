@@ -2,7 +2,7 @@
     <div class="message-wrapper" :title="stringTime">
         <div :class="style_class"  :style="styleGenerator" :id="id">
             <div v-show="message_from"> <b> {{ message_from }} </b> <br /> </div>
-            <div v-html="content"></div>
+            <div class="message-content" v-html="content"></div>
             <!-- Content is inserted via v-html -->
 
             <!-- Media -->
