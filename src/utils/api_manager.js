@@ -13,6 +13,7 @@ export default class Api {
     constructor () {
         this.socket = null;
         this.openWebSocket();
+        this.last_ping = null;
         
         this.has_disconnected = false;
     }
@@ -23,18 +24,20 @@ export default class Api {
     openWebSocket() {
 
         const this_ = this;
+        const stream_url = Url.get('websocket') + Url.getAccountParam();
 
-
-        this.socket = new ReconnectingWebsocket(Url.get('websocket') + Url.getAccountParam());
+        this.socket = new ReconnectingWebsocket(stream_url);
 
         this.socket.addEventListener('open', () => {
             
-            if (this.has_disconnected) {
-                store.state.msgbus.$emit('refresh-btn');
+            // When connected is false, ie is disconnected
+            if (store.state.connected === false) {
+                store.state.msgbus.$emit('refresh-btn'); // Force refresh
+                document.querySelector(".mdl-snackbar").MaterialSnackbar.cleanup_()
                 Util.snackbar("And we're back!");
             }
 
-            this.has_disconnected = false;
+            store.commit('connected', true);
 
             const subscribe = JSON.stringify({
                 "command": "subscribe",
@@ -53,11 +56,41 @@ export default class Api {
             if (e.wasClean || e.code == 1001) // If not an error, ignore
                 return
 
-            if (!this.has_disconnected)
-                Util.snackbar("You've been disconnected. We're trying to reconnect you...");
-
-            this.has_disconnected = true;
+            store.commit('connected', false);
         });
+        
+        this.socket.addEventListener('error', (e) => {
+            if( store.state.connected === false)
+                return;
+
+            store.commit('connected', false);
+            this.reconnectUI();
+        });
+
+    }
+
+    reconnectUI () {
+        const snackbar_data = {
+            message: "You seem to be offline. Reconnecting...", 
+            actionText: "Retry", 
+            actionHandler: () => {}, 
+            timeout: 60*60*60*60
+        }
+        
+        const snackbar = Util.snackbar(snackbar_data);
+        const text = snackbar.querySelector(".mdl-snackbar__text");
+
+        const interval = setInterval(() => {
+            const dots = text.innerHTML.match(/\./g) 
+            console.log(text.innerHTML, dots)
+            if (dots && dots.length >= 3)
+                text.innerHTML = text.innerHTML.replace(/\./g, "");
+            else
+                text.innerHTML += ".";
+
+            if (store.state.connected == true)
+                clearInterval(interval);
+        }, 2000);
     }
 
     /**

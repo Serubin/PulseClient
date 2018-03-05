@@ -181,14 +181,16 @@ export default {
                 // If last ping is within 15 seconds, ignore
                 if (last_ping > (Date.now() / 1000 >> 0) - 15)
                     return;
-                
+
+                return;
+                // TODO, SHOULD CHECK IF API IS STILL ACTIVE
                 // Else, open new API and force refresh
-                this.mm = new Api();
-                this.$store.state.msgbus.$emit('refresh-btn');
+  //              this.mm = new Api();
+    //            this.$store.state.msgbus.$emit('refresh-btn');
 
                 // TODO slack like reconnection process
 
-            }, 15 * 1000);
+            }, 5 * 1000);
         },
 
         /**
