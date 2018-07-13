@@ -1,4 +1,7 @@
 # PulseClient
+
+# This Repo has been moved and is now the offical web client of PulseSMS. It can be found at [https://github.com/klinker-apps/messenger-web](https://github.com/klinker-apps/messenger-web)
+
 PulseClient. An Open Source alternative to the PulseSMS web and desktop app. 
 
 ## Description
